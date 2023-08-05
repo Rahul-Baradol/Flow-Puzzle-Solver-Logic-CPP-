@@ -6,6 +6,7 @@ using namespace std;
 
 int n,m;
 
+vector<int> parent;
 vector<vector<int>> grid;
 vector<vector<int>> vis;
 vector<pair<int,int>> colorsAccToFreeMoves;
@@ -19,30 +20,161 @@ int dc[4] = {0,-1,0,1};
 
 void colorManager(int color);
 
+// Disjoint Set/ Union Find/ Merge Set
+void initializeDisjointSet(int countOfNodes) {
+    parent.resize(countOfNodes+1);
+    for (int i = 0; i <= countOfNodes; i++) {
+        parent[i] = i;
+    }
+}
+
+int findParent(int node) {
+    int ultimateParent = node;
+
+    // Finding the ultimate parent
+    while (parent[ultimateParent] != ultimateParent) {
+        ultimateParent = parent[ultimateParent];
+    }
+
+    // Path compression
+    while (parent[node] != node) {
+        int previousNode = parent[node];
+        parent[node] = ultimateParent;
+        node = previousNode;
+    }
+
+    return ultimateParent;
+}
+
+void Union(int x, int y) {
+    int px = findParent(x);
+    int py = findParent(y);
+    parent[px] = parent[py];
+}
+
+// Function to swap the values of two variables
 void swap(int &a, int &b) {
     int tmp = a;
     a = b;
     b = tmp;
 }
 
-// dfs
+// Checks if there is a colour which cannot be connected 
+bool checkForStuckColors(int ind, int currentColor) {
+    bool stuckColorExists = false;
+
+    for (int index = ind+1; index < colorsAccToFreeMoves.size(); index++) {
+        pair<int,int> element = colorsAccToFreeMoves[index];
+
+        int color = element.second;
+
+        int colorStartPosX = colorX[color][0];
+        int colorStartPosY = colorY[color][0];
+
+        int colorEndPosX = colorX[color][1];
+        int colorEndPosY = colorY[color][1];
+
+        vector<vector<int>> checkerGrid(n, vector<int>(m, 0));
+        vector<vector<int>> labelGrid(n, vector<int>(m, 0));
+
+        for (int row = 0; row < n; row++) {
+            for (int col = 0; col < m; col++) {
+                if (vis[row][col] == 0)
+                    checkerGrid[row][col] = 1;
+
+                if (row == colorStartPosX && col == colorStartPosY)
+                    checkerGrid[row][col] = 1;
+
+                if (row == colorEndPosX && col == colorEndPosY)
+                    checkerGrid[row][col] = 1;
+            }
+        }
+
+        // Intializes the parent vector of Disjoint Set
+        initializeDisjointSet(n * m);
+        int currentLabel = 0;
+
+        for (int row = 0; row < n; row++) {
+            for (int col = 0; col < m; col++) {
+                if (checkerGrid[row][col] == 0) continue;
+                int top = 0, left = 0;
+                if (col-1 >= 0 && checkerGrid[row][col-1] == 1)
+                    left = labelGrid[row][col-1];
+
+                if (row-1 >= 0 && checkerGrid[row-1][col] == 1)
+                    top = labelGrid[row-1][col];
+                
+                if (top == 0 && left == 0) {
+                    currentLabel++;
+                    labelGrid[row][col] = currentLabel;
+                }
+
+                if (top != 0 && left == 0) {
+                    labelGrid[row][col] = findParent(top);
+                }
+
+                if (top == 0 && left != 0) {
+                    labelGrid[row][col] = findParent(left);
+                }
+
+                if (top != 0 && left != 0) {
+                    Union(top, left);
+                    labelGrid[row][col] = findParent(left);
+                }
+            }
+        }
+
+        int startParent = findParent(labelGrid[colorStartPosX][colorStartPosY]);
+        int endParent = findParent(labelGrid[colorEndPosX][colorEndPosY]);
+        
+        // Check if the two positions of the color belong to the same component
+        if (startParent != endParent) {
+            stuckColorExists = true;
+            break;
+        }
+    }
+
+    return stuckColorExists;
+}   
+
+// Function which returns true if the current state of the grid is solvable or returns false otherwise
+bool performValidityCheck(int ind, int currentColor) {
+    if (checkForStuckColors(ind, currentColor)) {
+        return false;
+    }
+
+    return true;
+}
+
+// Recursive function which traces the path of a color -> Depth First Search
 void solveThisColor(int row, int col, int ind) {
     int color = colorsAccToFreeMoves[ind].second;
     if (solved) {
         return;
     }
 
-    if (colorX[color][1] == row && colorY[color][1] == col) {
-        colorManager(ind+1);
-        return;
-    }
-
     int prev = grid[row][col];
     int prevVis = vis[row][col];
+
+    if (colorX[color][1] == row && colorY[color][1] == col) {
+        vis[row][col] = 1;
+        colorManager(ind+1);
+        vis[row][col] = prevVis;
+        return;
+    }
 
     vis[row][col] = 1;
     grid[row][col] = color;
 
+    // Checking if the current state of the grid is solvable
+    bool isValidState = performValidityCheck(ind, color);
+    if (!isValidState) {
+        vis[row][col] = prevVis;
+        grid[row][col] = prev;
+        return;
+    }
+
+    // Continuing with current state of the grid
     for (int i = 0; i < 4; i++) {
         int newRow = row + dr[i];
         int newCol = col + dc[i];
@@ -59,6 +191,7 @@ void solveThisColor(int row, int col, int ind) {
     vis[row][col] = prevVis;
 }
 
+// This function calls the 'solveThisColor' function to solve a color and keeps track of the grid to see if the puzzle is solved
 void colorManager(int ind) {
     if (ind >= colorsAccToFreeMoves.size()) {
         bool ok = 1;
@@ -92,6 +225,7 @@ int main() {
     grid.resize(n, vector<int>(m, -1));
     vis.resize(n, vector<int>(m, 0));
 
+    // Takes the puzzle from the user
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {
             char color;
@@ -110,6 +244,7 @@ int main() {
         }
     }
 
+    // Returns the free moves available at position (r, c)
     auto checkFreeMoves = [](int r, int c) -> int {
         int freeMoves = 0;
         for (int k = 0; k < 4; k++) {
@@ -135,7 +270,8 @@ int main() {
         colorsAccToFreeMoves.push_back({freeMoves1, colorCode});
     }
 
-    sort(colorsAccToFreeMoves.begin(), colorsAccToFreeMoves.end()); // sorting in ascending order of free moves
+    // sorting in ascending order of free moves
+    sort(colorsAccToFreeMoves.begin(), colorsAccToFreeMoves.end()); 
 
     cout << "\nCalculating...\n";
 
