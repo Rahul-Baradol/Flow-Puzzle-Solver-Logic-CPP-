@@ -60,7 +60,7 @@ void swap(int &a, int &b) {
 }
 
 // Checks if there is a colour which cannot be connected 
-bool checkForStuckColors(int ind, int currentColor) {
+bool checkForStuckColors(int ind) {
     bool stuckColorExists = false;
 
     for (int index = ind+1; index < colorsAccToFreeMoves.size(); index++) {
@@ -139,26 +139,48 @@ bool checkForStuckColors(int ind, int currentColor) {
 
 // Function which returns true if the current state of the grid is solvable or returns false otherwise
 bool performValidityCheck(int ind, int currentColor) {
-    if (checkForStuckColors(ind, currentColor)) {
+    if (checkForStuckColors(ind)) {
         return false;
     }
 
     return true;
 }
 
-// Recursive function which traces the path of a color -> Depth First Search
-void solveThisColor(int row, int col, int ind) {
+// Recursive function which traces the path of a color
+void solvePuzzle(int row, int col, int ind) {
     int color = colorsAccToFreeMoves[ind].second;
+    
     if (solved) {
         return;
     }
+
+    if (ind == colorsAccToFreeMoves.size()) {
+        bool ok = (vis != vector<vector<int>>(n, vector<int>(m, 0)));
+
+        if (ok) {
+            solved = 1;
+        }
+        return;
+    } 
 
     int prev = grid[row][col];
     int prevVis = vis[row][col];
 
     if (colorX[color][1] == row && colorY[color][1] == col) {
         vis[row][col] = 1;
-        colorManager(ind+1);
+        
+        // Move to next color state
+            if (ind+1 == colorsAccToFreeMoves.size()) {
+                solvePuzzle(-1, -1, ind+1);
+            } else {
+                int newColor = colorsAccToFreeMoves[ind+1].second;
+                int nextRow = colorX[newColor][0];
+                int nextCol = colorY[newColor][0];
+                solvePuzzle(nextRow, nextCol, ind+1);
+            }
+        // End
+
+
         vis[row][col] = prevVis;
         return;
     }
@@ -180,7 +202,7 @@ void solveThisColor(int row, int col, int ind) {
         int newCol = col + dc[i];
         if (newRow < n && newCol < m && newRow >= 0 && newCol >= 0) {
             if (vis[newRow][newCol] == 0 || (vis[newRow][newCol] == 2 && grid[newRow][newCol] == color)) {
-                solveThisColor(newRow, newCol, ind);
+                solvePuzzle(newRow, newCol, ind);
             }
 
             if (solved) return;
@@ -189,34 +211,6 @@ void solveThisColor(int row, int col, int ind) {
     
     grid[row][col] = prev;
     vis[row][col] = prevVis;
-}
-
-// This function calls the 'solveThisColor' function to solve a color and keeps track of the grid to see if the puzzle is solved
-void colorManager(int ind) {
-    if (ind >= colorsAccToFreeMoves.size()) {
-        bool ok = 1;
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < m; j++) {
-                if (vis[i][j] == 0)
-                    ok = 0;
-            }
-        }
-
-        if (ok) {
-            solved = 1;
-        }
-
-        return;
-    }
-
-    if (solved == 1) {
-        return;
-    }
-
-    int color = colorsAccToFreeMoves[ind].second;
-    int row = colorX[color][0];
-    int col = colorY[color][0];
-    solveThisColor(row, col, ind);
 }
 
 int main() {
@@ -275,7 +269,10 @@ int main() {
 
     cout << "\nCalculating...\n";
 
-    colorManager(0);
+    int startColor = colorsAccToFreeMoves[0].second;
+    int startX = colorX[startColor][0];
+    int startY = colorY[startColor][0];
+    solvePuzzle(startX, startY, 0);
 
     if (!solved) {
         cout << "\nNot possible to solve the given puzzle :(\n";
