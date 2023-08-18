@@ -148,8 +148,6 @@ bool performValidityCheck(int ind, int currentColor) {
 
 // Recursive function which traces the path of a color
 void solvePuzzle(int row, int col, int ind) {
-    int color = colorsAccToFreeMoves[ind].second;
-    
     if (solved) {
         return;
     }
@@ -162,6 +160,8 @@ void solvePuzzle(int row, int col, int ind) {
         }
         return;
     } 
+    
+    int color = colorsAccToFreeMoves[ind].second;
 
     int prev = grid[row][col];
     int prevVis = vis[row][col];
