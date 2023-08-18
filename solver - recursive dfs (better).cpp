@@ -153,7 +153,15 @@ void solvePuzzle(int row, int col, int ind) {
     }
 
     if (ind == colorsAccToFreeMoves.size()) {
-        bool ok = (vis != vector<vector<int>>(n, vector<int>(m, 0)));
+        bool ok = 1;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                if (vis[i][j] == 0) {
+                    ok = 0;
+                    break;
+                }
+            }
+        }
 
         if (ok) {
             solved = 1;
