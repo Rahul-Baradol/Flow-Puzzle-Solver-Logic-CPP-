@@ -63,72 +63,80 @@ void swap(int &a, int &b) {
 bool checkForStuckColors(int ind) {
     bool stuckColorExists = false;
 
-    for (int index = ind+1; index < colorsAccToFreeMoves.size(); index++) {
-        pair<int,int> element = colorsAccToFreeMoves[index];
+    vector<vector<int>> checkerGrid(n, vector<int>(m, 0));
+    vector<vector<int>> labelGrid(n, vector<int>(m, 0));
 
-        int color = element.second;
+    for (int row = 0; row < n; row++) {
+        for (int col = 0; col < m; col++) {
+            if (vis[row][col] == 0)
+                checkerGrid[row][col] = 1;
+        }
+    }
 
-        int colorStartPosX = colorX[color][0];
-        int colorStartPosY = colorY[color][0];
+    // Intializes the parent vector of Disjoint Set
+    initializeDisjointSet(n * m);
+    int currentLabel = 0;
 
-        int colorEndPosX = colorX[color][1];
-        int colorEndPosY = colorY[color][1];
+    for (int row = 0; row < n; row++) {
+        for (int col = 0; col < m; col++) {
+            if (checkerGrid[row][col] == 0) continue;
+            int top = 0, left = 0;
+            if (col-1 >= 0 && checkerGrid[row][col-1] == 1)
+                left = labelGrid[row][col-1];
 
-        vector<vector<int>> checkerGrid(n, vector<int>(m, 0));
-        vector<vector<int>> labelGrid(n, vector<int>(m, 0));
+            if (row-1 >= 0 && checkerGrid[row-1][col] == 1)
+                top = labelGrid[row-1][col];
+            
+            if (top == 0 && left == 0) {
+                currentLabel++;
+                labelGrid[row][col] = currentLabel;
+            }
 
-        for (int row = 0; row < n; row++) {
-            for (int col = 0; col < m; col++) {
-                if (vis[row][col] == 0)
-                    checkerGrid[row][col] = 1;
+            if (top != 0 && left == 0) {
+                labelGrid[row][col] = findParent(top);
+            }
 
-                if (row == colorStartPosX && col == colorStartPosY)
-                    checkerGrid[row][col] = 1;
+            if (top == 0 && left != 0) {
+                labelGrid[row][col] = findParent(left);
+            }
 
-                if (row == colorEndPosX && col == colorEndPosY)
-                    checkerGrid[row][col] = 1;
+            if (top != 0 && left != 0) {
+                Union(top, left);
+                labelGrid[row][col] = findParent(left);
             }
         }
+    }
 
-        // Intializes the parent vector of Disjoint Set
-        initializeDisjointSet(n * m);
-        int currentLabel = 0;
-
-        for (int row = 0; row < n; row++) {
-            for (int col = 0; col < m; col++) {
-                if (checkerGrid[row][col] == 0) continue;
-                int top = 0, left = 0;
-                if (col-1 >= 0 && checkerGrid[row][col-1] == 1)
-                    left = labelGrid[row][col-1];
-
-                if (row-1 >= 0 && checkerGrid[row-1][col] == 1)
-                    top = labelGrid[row-1][col];
-                
-                if (top == 0 && left == 0) {
-                    currentLabel++;
-                    labelGrid[row][col] = currentLabel;
-                }
-
-                if (top != 0 && left == 0) {
-                    labelGrid[row][col] = findParent(top);
-                }
-
-                if (top == 0 && left != 0) {
-                    labelGrid[row][col] = findParent(left);
-                }
-
-                if (top != 0 && left != 0) {
-                    Union(top, left);
-                    labelGrid[row][col] = findParent(left);
-                }
-            }
-        }
-
-        int startParent = findParent(labelGrid[colorStartPosX][colorStartPosY]);
-        int endParent = findParent(labelGrid[colorEndPosX][colorEndPosY]);
+    for (auto tmp: colorsAccToFreeMoves) {
+        int color = tmp.second;
+        if (color == colorsAccToFreeMoves[ind].second) continue;
         
-        // Check if the two positions of the color belong to the same component
-        if (startParent != endParent) {
+        int startPosX = colorX[color][0];
+        int startPosY = colorY[color][0];
+
+        int endPosX = colorX[color][1];
+        int endPosY = colorY[color][1];
+
+        bool ok = 0;
+        for (int k1 = 0; k1 < 4; k1++) {
+            int newStartX = startPosX + dr[k1];
+            int newStartY = startPosY + dc[k1];
+
+            if (newStartX < 0 || newStartY < 0 || newStartX >= n || newStartY >= m) continue;
+
+            for (int k2 = 0; k2 < 4; k2++) {
+                int newEndX = endPosX + dr[k2];
+                int newEndY = endPosY + dc[k2];
+
+                if (newEndX < 0 || newEndY < 0 || newEndX >= n || newEndY >= m) continue;
+
+                if (findParent(labelGrid[newStartX][newStartY]) == findParent(labelGrid[newEndX][newEndY])) {
+                    ok = 1;                    
+                }
+            }
+        }
+        
+        if (ok == 0) {
             stuckColorExists = true;
             break;
         }
