@@ -205,7 +205,12 @@ void solvePuzzle(int row, int col, int ind) {
     grid[row][col] = color;
 
     // Checking if the current state of the grid is solvable
-    bool isValidState = performValidityCheck(ind, color);
+    bool isValidState = true;
+
+    if (colorsAccToFreeMoves.size() >= 3) {
+        isValidState = performValidityCheck(ind, color);
+    } 
+
     if (!isValidState) {
         vis[row][col] = prevVis;
         grid[row][col] = prev;
